@@ -1,0 +1,17 @@
+# Normalise to LF in the repository, and check out whatever the platform expects.
+* text=auto
+
+# Shell scripts must be LF even on a Windows checkout. Committed with CRLF they fail on Linux and
+# macOS with "bad interpreter: no such file or directory", which is a baffling way for a clone to
+# break. Batch files are the mirror image and want CRLF.
+*.sh text eol=lf
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+# Dockerfile is read inside a Linux container.
+Dockerfile text eol=lf
+.dockerignore text eol=lf
+
+# Keep diffs on generated EF migrations out of the way of review.
+src/TrackMeBaby/Migrations/*.Designer.cs linguist-generated=true
+src/TrackMeBaby/Migrations/TrackerDbContextModelSnapshot.cs linguist-generated=true

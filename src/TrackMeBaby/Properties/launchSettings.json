@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json.schemastore.org/launchsettings.json",
+  "//": "5199 everywhere, matching appsettings.json, docker-compose.yml, .mcp.json and the README — an IDE launch and a start script reach the same URL. Note that running from an IDE does not go through start.sh/start.cmd, so it gets no settings from docker-compose.yml; use a start script, or set the Tracker__* variables here.",
+
+  "profiles": {
+    "http": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": true,
+      "applicationUrl": "http://127.0.0.1:5199",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

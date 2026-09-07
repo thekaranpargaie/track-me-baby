@@ -1,0 +1,20 @@
+bin/
+obj/
+*.user
+.vs/
+.idea/
+
+# Your GitHub token goes in docker-compose.yml, which IS tracked. Run this once after cloning so
+# your edits to it can never be staged, committed or pushed:
+#     git update-index --skip-worktree docker-compose.yml
+# Undo with --no-skip-worktree if you ever need to pull a change to that file.
+
+# Optional alternative home for the token, if you prefer it out of docker-compose.yml entirely.
+.env
+
+# Left behind by versions of this project that kept settings in a local JSON file. Nothing reads
+# it any more, but it is ignored so an old copy holding a token can never be committed by mistake.
+appsettings.Local.json
+
+# Generated reports. Yours to keep, not to commit.
+exports/

@@ -1,0 +1,22 @@
+**/bin/
+**/obj/
+**/*.user
+.git/
+.vs/
+.idea/
+
+# Configuration reaches the container as environment variables at runtime, so the image is built
+# without any of it and never holds a secret.
+docker-compose.yml
+.env
+**/appsettings.Local.json
+
+docs/
+*.md
+.mcp.json
+start.sh
+start.cmd
+start-docker.sh
+start-docker.cmd
+
+exports/

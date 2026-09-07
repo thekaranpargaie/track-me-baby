@@ -1,0 +1,34 @@
+{
+  "//": "Merge ONE of the entries below into your Claude Desktop config, then restart Claude Desktop.",
+
+  "//where": "Windows: %APPDATA%\\Claude\\claude_desktop_config.json  ·  macOS: ~/Library/Application Support/Claude/claude_desktop_config.json  ·  Linux: ~/.config/Claude/claude_desktop_config.json",
+
+  "//paths": "Replace /ABSOLUTE/PATH/TO/track-me-baby with wherever you cloned this repository. The paths must be absolute — Claude Desktop does not run in your project directory. On Windows use double backslashes, e.g. \"C:\\\\code\\\\track-me-baby\\\\docker-compose.yml\".",
+
+  "//docker": "Use the 'track-me-baby' entry if you run the stack with docker compose. No build step is needed and each Claude Desktop launch creates a throwaway container against the same database. Configuration comes from docker-compose.yml, same as the long-running container.",
+
+  "//native": "Use 'track-me-baby-native' instead if you run the tracker on the host (rename it to track-me-baby). Run 'dotnet build -c Release' first so the binary exists, and point at the binary rather than 'dotnet run' — dotnet run prints build messages to stdout, which corrupts the JSON-RPC stream. Note this entry gets no configuration from docker-compose.yml, because Claude Desktop launches it directly rather than through the start script; export GITHUB_TOKEN and the Tracker__* variables in your environment, or just use the Docker entry.",
+
+  "//note": "Either way the HTTP host does not need to be running: Claude Desktop launches its own copy. The two coordinate through the database, so they never sync simultaneously.",
+
+  "mcpServers": {
+    "track-me-baby": {
+      "command": "docker",
+      "args": [
+        "compose",
+        "-f",
+        "/ABSOLUTE/PATH/TO/track-me-baby/docker-compose.yml",
+        "run",
+        "--rm",
+        "-T",
+        "tracker",
+        "--stdio"
+      ]
+    },
+
+    "track-me-baby-native": {
+      "command": "/ABSOLUTE/PATH/TO/track-me-baby/src/TrackMeBaby/bin/Release/net10.0/TrackMeBaby",
+      "args": ["--stdio"]
+    }
+  }
+}

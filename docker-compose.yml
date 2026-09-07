@@ -1,0 +1,193 @@
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+#  track-me-baby — this file is the ONLY file you need to edit.
+#
+#  Everything configurable lives in the "YOUR CONFIGURATION" block below. Fill in your GitHub
+#  token, set your time zone, then run:
+#
+#      docker compose up -d --build
+#
+#  This file is tracked by git, so before you edit it, tell git to ignore your changes:
+#
+#      git update-index --skip-worktree docker-compose.yml
+#
+#  That keeps your token out of `git status`, `git add .` and any commit or pull request. If you
+#  would rather not put the token in a file at all, leave Tracker__GitHub__Token empty and export
+#  GITHUB_TOKEN in your shell instead — the tracker reads that too.
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: trackmebaby-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: trackmebaby
+      POSTGRES_USER: tracker
+      POSTGRES_PASSWORD: tracker
+    # 5433 on purpose: leaves 5432 free for any Postgres you already have installed.
+    ports:
+      - "5433:5432"
+    volumes:
+      - trackmebaby-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tracker -d trackmebaby"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  tracker:
+    build: .
+    image: trackmebaby-tracker
+    container_name: trackmebaby
+    restart: unless-stopped
+    depends_on:
+      db:
+        # Migrations run at startup, so do not start until Postgres accepts connections.
+        condition: service_healthy
+
+    environment:
+      # ═══════════════════════════════════════════════════════════════════════════════════════
+      #  YOUR CONFIGURATION
+      #
+      #  Every "Tracker__*" key below is also read by the host process (start.sh / start.cmd),
+      #  which parses this block — so one file configures both ways of running. Keep the
+      #  one-key-per-line `Key: "value"` shape and that stays true.
+      #
+      #  Apply changes with:  docker compose up -d tracker
+      #  (not `docker compose restart`, which reuses the environment the container was created
+      #  with and would silently ignore your edit)
+      # ═══════════════════════════════════════════════════════════════════════════════════════
+
+      # ── 1. Required ────────────────────────────────────────────────────────────────────────
+
+      # Classic GitHub personal access token. Scopes: repo, read:org, read:user, read:project
+      # (add `project` only if you want the write tools to move cards). If your repos are in an
+      # SSO org, click "Configure SSO" on the token and authorise it — without that, GitHub
+      # returns empty results rather than an error.
+      # Leave empty to use the GITHUB_TOKEN environment variable instead.
+      Tracker__GitHub__Token: ""
+
+      # IANA id ("Asia/Kolkata", "America/New_York", "Europe/London") or a Windows id
+      # ("India Standard Time") — both work on either platform. Set this: relative periods like
+      # "yesterday" and "last_week" are resolved in this zone, and a container's own zone is UTC.
+      Tracker__TimeZone: "UTC"
+
+      # ── 2. Scope: which GitHub work counts as yours ─────────────────────────────────────────
+
+      # Your GitHub login. Left empty it is resolved from the token once and cached.
+      Tracker__GitHub__Login: ""
+
+      # Narrow the search to specific orgs and enable board auto-discovery for them. Commented
+      # out means "everything the token can see", which is usually what you want to start with.
+      # Add one line per org, numbered from 0 and with no gaps.
+      # Tracker__GitHub__Organizations__0: "your-org"
+      # Tracker__GitHub__Organizations__1: "your-other-org"
+
+      # Only look at these repositories ("owner/repo"). Commented out = no filtering.
+      # Tracker__GitHub__IncludeRepositories__0: "your-org/api"
+
+      # Ignore these repositories, applied after the include list above.
+      # Tracker__GitHub__ExcludeRepositories__0: "your-org/sandbox"
+
+      # ── 3. Project boards (GitHub Projects V2) ─────────────────────────────────────────────
+
+      Tracker__GitHub__SyncProjects: "true"
+
+      # Boards to track, as "owner/number" — the number is the last part of the board URL.
+      # Commented out = auto-discover. Auto-discovery only finds boards you own, so boards that
+      # belong to an organisation have to be listed here explicitly.
+      # Tracker__GitHub__Projects__0: "your-org/7"
+
+      # The single-select field treated as the board column.
+      Tracker__GitHub__StatusFieldName: "Status"
+
+      # Where create_ticket puts a new issue when Claude does not name a repository or board.
+      Tracker__GitHub__DefaultRepository: ""
+      Tracker__GitHub__DefaultProject: ""
+
+      # ── 4. What counts as a deployment ─────────────────────────────────────────────────────
+      #
+      #  The one thing DORA cannot be computed without, and every team means something different
+      #  by it — often something different at each gate. Each environment gets its own four
+      #  metrics; they are never blended. Triggers:
+      #
+      #    commit   every push ships (lead time is reported as not applicable)
+      #    merge    a pull request merged into one of the listed Branches
+      #    tag      a git tag matching TagPattern was cut
+      #    release  a GitHub release was published
+      #
+      #  Numbered from 0, no gaps. Declaring any environment here replaces the built-in ladder
+      #  entirely, so list all of them.
+
+      Tracker__Delivery__Environments__0__Name: "dev"
+      Tracker__Delivery__Environments__0__Trigger: "commit"
+
+      Tracker__Delivery__Environments__1__Name: "qa"
+      Tracker__Delivery__Environments__1__Trigger: "merge"
+      Tracker__Delivery__Environments__1__Branches__0: "main"
+      Tracker__Delivery__Environments__1__Branches__1: "master"
+
+      Tracker__Delivery__Environments__2__Name: "stage"
+      Tracker__Delivery__Environments__2__Trigger: "tag"
+      Tracker__Delivery__Environments__2__TagPattern: "v*"
+
+      # Uncomment if you publish GitHub releases for production cuts.
+      # Tracker__Delivery__Environments__3__Name: "production"
+      # Tracker__Delivery__Environments__3__Trigger: "release"
+
+      # Collect tags and releases. Needed only by the tag and release triggers above; costs one
+      # GraphQL call per active repository per sync. Set to "false" if you use neither.
+      Tracker__Delivery__SyncTags: "true"
+
+      # Failure rate and time-to-restore are detected from reverts and hotfixes. Uncommenting any
+      # line in one of these lists replaces that list's defaults, shown here as the values.
+      # Tracker__Delivery__HotfixBranchPrefixes__0: "hotfix"
+      # Tracker__Delivery__HotfixBranchPrefixes__1: "revert-"
+      # Tracker__Delivery__IncidentLabels__0: "incident"
+      # Tracker__Delivery__IncidentLabels__1: "sev1"
+      # Tracker__Delivery__IncidentLabels__2: "outage"
+
+      # ── 5. Collection schedule ─────────────────────────────────────────────────────────────
+
+      Tracker__Sync__Enabled: "true"
+      Tracker__Sync__IntervalMinutes: "60"
+      Tracker__Sync__RunOnStartup: "true"
+
+      # How far back the very first sync reaches. 180 days takes 20-30 minutes; requests are
+      # deliberately spaced to stay inside GitHub's rate limits. It is safe to interrupt.
+      Tracker__GitHub__InitialBackfillDays: "180"
+
+      # Fetch issue and PR comments. One extra API call per changed item.
+      Tracker__GitHub__SyncComments: "true"
+
+      # ── 6. Exported reports ────────────────────────────────────────────────────────────────
+
+      # Your name and title, printed on the cover of exported reports. Empty name = GitHub login.
+      Tracker__Reports__DisplayName: ""
+      Tracker__Reports__Role: ""
+
+      # ═══════════════════════════════════════════════════════════════════════════════════════
+      #  CONTAINER PLUMBING — no reason to touch these.
+      #  Deliberately not prefixed "Tracker__", so the host start scripts skip them: the host
+      #  reaches Postgres on 127.0.0.1:5433 and binds its own loopback address.
+      # ═══════════════════════════════════════════════════════════════════════════════════════
+
+      # Reaches Postgres over the compose network, not the published 5433.
+      ConnectionStrings__Tracker: "Host=db;Port=5432;Database=trackmebaby;Username=tracker;Password=tracker"
+      # appsettings.json binds 127.0.0.1, which inside a container means "nobody". The port
+      # mapping below is what keeps this off the network.
+      Kestrel__Endpoints__Http__Url: "http://0.0.0.0:5199"
+      # Fallback for the token, so `export GITHUB_TOKEN=...` on the host reaches the container.
+      GITHUB_TOKEN: "${GITHUB_TOKEN:-}"
+
+    # Loopback-only: the MCP endpoint can write to your GitHub, and it is unauthenticated.
+    ports:
+      - "127.0.0.1:5199:5199"
+
+    volumes:
+      # Where export_report writes. The content root is /app and Tracker:Reports:Directory
+      # defaults to the relative "exports", so this is the same path the host process uses.
+      - ./exports:/app/exports
+
+volumes:
+  trackmebaby-data:
