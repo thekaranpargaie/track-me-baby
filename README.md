@@ -4,6 +4,9 @@ A private performance tracker: it collects your GitHub activity into PostgreSQL 
 lets you record the context GitHub cannot know, and exposes both to Claude through MCP so you can
 ask *"what did I actually accomplish in the last six months?"* and get an evidence-backed answer.
 
+<img width="1383" height="978" alt="image" src="https://github.com/user-attachments/assets/3abeb60f-5fa9-473b-8873-ed64586c28b8" />
+
+
 Runs entirely on your machine. Nothing leaves it, and **[docker-compose.yml](docker-compose.yml) is
 the only file you configure** — one place for your token, your time zone and what counts as a
 deployment. Design background is in [docs/plan.md](docs/plan.md).
